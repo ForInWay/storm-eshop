@@ -44,6 +44,6 @@ public class LogParseBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("declarer"));
+        declarer.declare(new Fields("productId"));
     }
 }
