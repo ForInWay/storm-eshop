@@ -1,5 +1,6 @@
 package com.morgan.storm.bolt;
 
+import com.alibaba.fastjson.JSONArray;
 import com.morgan.storm.config.ZookeeperSession;
 import com.morgan.storm.constant.GlobalConstants;
 import com.morgan.storm.utils.Tools;
@@ -29,6 +30,7 @@ public class ProductCountBolt extends BaseRichBolt {
     private int taskId;
     private final static String TASK_LIST_LOCK = "task-list-lock";
     private final static String TASK_ID_LIST = "task-id-list";
+    private final static String PRODUCT_LIST_PREFIX = "task-hot-product-list-";
 
     private class ProductCountThread implements Runnable{
         @Override
@@ -39,18 +41,36 @@ public class ProductCountBolt extends BaseRichBolt {
                 topThreeProductList.clear();
                 int topN = 3;
                 if (productCountMap.size() == 0){
-                    Utils.sleep(100);
+                    Utils.sleep(1000);
                     continue;
                 }
                 for (Map.Entry<Long,Long> productCountEntry: productCountMap.entrySet()){
+                    boolean hasMoved = false;
                     // 具体算法逻辑
                     if (topThreeProductList.size() == GlobalConstants.DIGITAL.ZERO){
                         topThreeProductList.add(productCountEntry);
+                    }else{
+                        for (int i = 0,size=topThreeProductList.size(); i < size; i++){
+                            Map.Entry<Long, Long> topThreeProduct = topThreeProductList.get(i);
+                            if (productCountEntry.getValue() >= topThreeProduct.getValue()){
+                                int lastIndex = topThreeProductList.size() <= topN ? topThreeProductList.size() - 1 : topThreeProductList.size() -2;
+                                for (int j = lastIndex; j > i; j--){
+                                    topThreeProductList.set(j+1,topThreeProductList.get(j));
+                                }
+                                topThreeProductList.set(i,productCountEntry);
+                                hasMoved = true;
+                                break;
+                            }
+                        }
                     }
-                    for (Map.Entry<Long,Long> product: topThreeProductList){
-
+                    if (!hasMoved && topThreeProductList.size() <= topN){
+                        topThreeProductList.add(productCountEntry);
                     }
                 }
+
+                String topThreeProductListString = JSONArray.toJSONString(topThreeProductList);
+                zkSession.setNodeData(GlobalConstants.SpecialChar.FORWARD_SLASH + PRODUCT_LIST_PREFIX,topThreeProductListString);
+                Utils.sleep(60000);
             }
         }
     }
