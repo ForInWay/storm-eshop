@@ -69,7 +69,7 @@ public class ProductCountBolt extends BaseRichBolt {
                 }
 
                 String topThreeProductListString = JSONArray.toJSONString(topThreeProductList);
-                zkSession.setNodeData(GlobalConstants.SpecialChar.FORWARD_SLASH + PRODUCT_LIST_PREFIX,topThreeProductListString);
+                zkSession.setNodeData(GlobalConstants.SpecialChar.FORWARD_SLASH + PRODUCT_LIST_PREFIX + taskId,topThreeProductListString);
                 Utils.sleep(60000);
             }
         }
